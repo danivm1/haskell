@@ -1,6 +1,8 @@
-import           Data.List                (foldl', foldl1', group, scanl', sort)
+import           Data.List                (foldl', foldl1', group, isSuffixOf,
+                                           partition, scanl', sort, tails)
 import           Distribution.Compat.Lens (_1)
 import           GHC.Utils.Encoding       (zDecodeString)
+import qualified Control.Applicative as 2
 
 doubleMe :: (Num a) => a -> a
 doubleMe x = x + x
@@ -160,6 +162,11 @@ fibonacci n = fibonacci (n-1) + fibonacci (n-2)
 
 fibonacci' :: [Integer]
 fibonacci' = 0 : 1 : zipWith (+) fibonacci' (tail fibonacci')
+
+-- 0 : 1 : [1, 2, 3, ...] = [0, 1, 1, 2, 3, ...]
+-- [0, 1, 1, 2, 3]
+-- [1, 1, 2, 3]
+-- [1, 2, 3, 5]
 
 replicate' :: (Num a, Ord a) => a -> b -> [b]
 replicate' n x
@@ -384,3 +391,38 @@ inits' (x:xs) = [] : map (x:) (inits' xs)
 tails' :: [a] -> [[a]]
 tails' []       = [[]]
 tails' l@(x:xs) = l : tails' xs
+
+isInfixOf' :: (Eq a) => [a] -> [a] -> Bool
+sub `isInfixOf'` lst =
+    let len = length sub
+    in foldl' (\acc x -> take len x == sub || acc) False (tails lst)
+
+isPrefixOf' :: (Eq a) => [a] -> [a] -> Bool
+sub `isPrefixOf'` lst =
+    let len = length sub
+    in take len lst == sub
+
+isSuffixOf' :: (Eq a) => [a] -> [a] -> Bool
+sub `isSuffixOf'` lst =
+    let lenSub = length sub
+        lenLst = length lst
+    in drop (lenLst - lenSub) lst == sub
+
+partition' :: (Eq a) => (a -> Bool) -> [a] -> ([a], [a])
+partition' _ []     = ([], [])
+partition' p (x:xs) =
+           let (ys, zs) = partition' p xs
+           in if p x
+                 then (x:ys, zs)
+                 else (ys, x:zs)
+
+-- (<2) [1, 2, 3]
+-- x = 1  xs = [2, 3]
+
+
+partition'' :: (Eq a) => (a -> Bool) -> [a] -> ([a], [a])
+partition'' _ [] = ([], [])
+partition'' p (x:xs)
+          | p x          = (x:ys, zs)
+          | otherwise    = (ys, x:zs)
+          where (ys, zs) = partition'' p xs
