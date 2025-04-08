@@ -1,8 +1,8 @@
+import           Data.Char                (isSpace)
 import           Data.List                (foldl', foldl1', group, isSuffixOf,
                                            partition, scanl', sort, tails)
 import           Distribution.Compat.Lens (_1)
 import           GHC.Utils.Encoding       (zDecodeString)
-import qualified Control.Applicative as 2
 
 doubleMe :: (Num a) => a -> a
 doubleMe x = x + x
@@ -201,13 +201,23 @@ zip'' [] (y:ys)     = (Nothing, Just y) : zip'' ys []
 zip'' (x:xs) (y:ys) = (Just x, Just y)  : zip'' xs ys
 
 elem' :: (Eq a) => a -> [a] -> Bool
-elem' _ [] = False
-elem' a (x:xs)
+_ `elem'` [] = False
+a `elem'` (x:xs)
     | a == x = True
     | otherwise = a `elem'` xs
 
 elem'' :: (Eq a) => a -> [a] -> Bool
 elem'' x = foldl' (\acc y -> x == y || acc) False
+
+notElem' :: (Eq a) => a -> [a] -> Bool
+_ `notElem'` [] = True
+a `notElem'` (x:xs)
+    | a == x = False
+    | otherwise = a `notElem'` xs
+
+notElem'' :: (Eq a) => a -> [a] -> Bool
+notElem'' a xs = not (foldl' (\acc x -> a == x || not acc) False xs)
+
 
 quicksort :: Ord a => [a] -> [a]
 quicksort []     = []
@@ -354,11 +364,13 @@ iterate'' :: (a -> a) -> a -> [a]
 iterate'' f x = x : iterate'' f (f x)
 
 takeWhile' :: (a -> Bool) -> [a] -> [a]
+takeWhile' _ [] = []
 takeWhile' p (x:xs)
          | p x = x : takeWhile' p xs
          | otherwise = []
 
 dropWhile' :: (a -> Bool) -> [a] -> [a]
+dropWhile' _ [] = []
 dropWhile' p (x:xs)
          | p x = dropWhile' p xs
          | otherwise = x : xs
@@ -380,6 +392,18 @@ group' [] = []
 group' (x:xs) = (x : ys) : group' zs
                 where (ys, zs) = span (==x) xs
 
+splitAt' :: Int -> [a] -> ([a], [a])
+splitAt' 0 xs     = ([], xs)
+splitAt' _ []     = ([], [])
+splitAt' n (x:xs) = let (ys, zs) = splitAt' (n-1) xs
+                    in (x:ys, zs)
+
+splitAt'' :: Int -> [a] -> ([a], [a])
+splitAt'' _ []         = ([], [])
+splitAt'' n (x:xs)
+        | n > 0        = (x:ys, zs)
+        | otherwise    = (ys, x:zs)
+        where (ys, zs) = splitAt'' (n-1) xs
 
 lenUniqueValue :: (Eq a, Ord a) => [a] -> [(a, Int)]
 lenUniqueValue = map (\l@(x:xs) -> (x, length l)) . group . sort
@@ -416,13 +440,110 @@ partition' p (x:xs) =
                  then (x:ys, zs)
                  else (ys, x:zs)
 
--- (<2) [1, 2, 3]
--- x = 1  xs = [2, 3]
-
-
 partition'' :: (Eq a) => (a -> Bool) -> [a] -> ([a], [a])
 partition'' _ [] = ([], [])
 partition'' p (x:xs)
           | p x          = (x:ys, zs)
           | otherwise    = (ys, x:zs)
           where (ys, zs) = partition'' p xs
+
+search :: (Eq a) => [a] -> [a] -> Bool
+search xs ys =
+    let len = length xs
+    in foldl' (\acc x -> take len x == xs || acc) False (tails ys)
+
+find' :: (a -> Bool) -> [a] -> Maybe a
+find' _ []      = Nothing
+find' p (x:xs)
+    | p x       = Just x
+    | otherwise = find' p xs
+
+elemIndex' :: (Eq a) => a -> [a] -> Maybe Int
+elemIndex' _ [] = Nothing
+elemIndex' a xs = indexAcc a xs 0
+    where
+        indexAcc _ [] _    = Nothing
+        indexAcc a (x:xs) i
+               | a == x    = Just i
+               | otherwise = indexAcc a xs (i + 1)
+
+elemIndices' :: (Eq a) => a -> [a] -> [Int]
+_ `elemIndices'` [] = []
+a `elemIndices'` xs = indicesAcc a xs 0
+    where
+        indicesAcc _ [] _    = []
+        indicesAcc a (x:xs) i
+                 | a == x    = i : indicesAcc a xs (i + 1)
+                 | otherwise = indicesAcc a xs (i + 1)
+
+findIndex' :: (a -> Bool) -> [a] -> Maybe Int
+findIndex' _ [] = Nothing
+findIndex' p xs = indexAcc p xs 0
+    where
+        indexAcc _ [] _    = Nothing
+        indexAcc p (x:xs) i
+               | p x       = Just i
+               | otherwise = indexAcc p xs (i + 1)
+
+findIndices' :: (a -> Bool) -> [a] -> [Int]
+findIndices' _ [] = []
+findIndices' p xs = indicesAcc p xs 0
+    where
+        indicesAcc _ [] _    = []
+        indicesAcc p (x:xs) i
+                 | p x       = i : indicesAcc p xs (i + 1)
+                 | otherwise = indicesAcc p xs (i + 1)
+
+zip4' :: [a] -> [b] -> [c] -> [d] -> [(a, b, c, d)]
+zip4' [] _ _ _                    = []
+zip4' _ [] _ _                    = []
+zip4' _ _ [] _                    = []
+zip4' _ _ _ []                    = []
+zip4' (w:ws) (x:xs) (y:ys) (z:zs) = (w, x, y, z) : zip4' ws xs ys zs
+
+zipWith3' :: (a -> b -> c -> d) -> [a] -> [b] -> [c] -> [d]
+zipWith3' _ [] _ _               = []
+zipWith3' _ _ [] _               = []
+zipWith3' _ _ _ []               = []
+zipWith3' f (x:xs) (y:ys) (z:zs) = f x y z : zipWith3' f xs ys zs
+
+lines' :: String -> [String]
+lines' [] = []
+lines' s  = let (l, t) = break' (== '\n') s
+            in l : case t of
+                   []     -> []
+                   (_:t') -> lines' t'
+
+unlines' :: [String] -> String
+unlines' = foldl1' (\acc x -> acc ++ ['\n'] ++ x)
+
+words' :: String -> [String]
+words' [] = []
+words' s  = let (w, t) = break' isSpace s
+            in w : words' (dropWhile' isSpace t)
+
+
+unwords' :: [String] -> String
+unwords' = foldl1' (\acc x -> acc ++ [' '] ++ x)
+
+nub' :: (Eq a) => [a] -> [a]
+nub' []     = []
+nub' (x:xs) = x : nub' (filter' (/=x) xs)
+
+delete' :: (Eq a) => a -> [a] -> [a]
+delete' _ []      = []
+delete' e (x:xs)
+      | e == x    = xs
+      | otherwise = x : delete' e xs
+
+(\\) :: (Eq a) => [a] -> [a] -> [a]
+(\\) [] _            = []
+(\\) xs []           = xs
+(\\) l@(x:xs) (y:ys) = let a = delete' y l
+                       in (\\) a ys
+
+union' :: (Eq a) => [a] -> [a] -> [a]
+xs `union'` ys = xs ++ foldl' (\acc y -> if y `elem'` acc || y `elem'` xs then acc else acc ++ [y]) [] ys
+
+intersect' :: (Eq a) => [a] -> [a] -> [a]
+xs `intersect'` ys = foldl' (\acc x -> if x `elem` acc || x `elem` ys then acc ++ [x] else acc) [] xs
