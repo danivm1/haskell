@@ -547,3 +547,17 @@ xs `union'` ys = xs ++ foldl' (\acc y -> if y `elem'` acc || y `elem'` xs then a
 
 intersect' :: (Eq a) => [a] -> [a] -> [a]
 xs `intersect'` ys = foldl' (\acc x -> if x `elem` acc || x `elem` ys then acc ++ [x] else acc) [] xs
+
+insert' :: (Ord a) => a -> [a] -> [a]
+insert' a [] = [a]
+insert' a (x:xs)
+    | a <= x = a : xs
+    | otherwise = x : insert' a xs
+
+groupBy' :: (a -> a -> Bool) -> [a] -> [[a]]
+groupBy' _ []      = []
+groupBy' eq (x:xs) = (x : ys) : groupBy' eq zs
+                     where
+                           (ys, zs) = span' (eq x) xs
+on' :: (b -> b -> c) -> (a -> b) -> a -> a -> c
+f `on'` g = \x y -> f (g x) (g y)
